@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 				lookupDirs.push_back(popArg());
 
 			else if(arg == "-s" || arg == "--seed")
-				seed = std::stoi(popArg());
+				seed = std::stoull(popArg());
 
 			else if(arg == "-m" || arg == "--blockMapping") {
 				const std::string str = popArg();
