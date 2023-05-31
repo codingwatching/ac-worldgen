@@ -34,6 +34,7 @@ void WGA_StructureGenerator_CPU::setup(WGA_Rule *entryRule, const BlockWorldPos 
 	stateStack_ = {};
 
 	seed_ = WorldGen_CPU_Utils::hash(origin.to<uint32_t>(), seed);
+	origin_ = origin;
 	expansionCount_ = 0;
 	queuedRuleExpansions_ = {};
 	currentDataContext_ = {};
@@ -55,18 +56,18 @@ bool WGA_StructureGenerator_CPU::process() {
 
 	while(true) {
 		if(ruleExpansions_.empty()) {
-			std::cerr << std::format("Failed to spawn structure: no solution found, tried all possible expansions. ({})", expansionCount_);
+			std::cerr << std::format("Failed to spawn structure at ({}, {}, {}): no solution found, tried all possible expansions. ({})", origin_.x(), origin_.y(), origin_.z(), expansionCount_);
 			return false;
 		}
 
 		expansionCount_++;
 		if(expansionCount_ >= maxExpansionCount_) {
-			std::cerr << std::format("Failed to spawn structure: maximum expansion count exceeded ({})", maxExpansionCount_);
+			std::cerr << std::format("Failed to spawn structure at ({}, {}, {}): maximum expansion count exceeded ({})", origin_.x(), origin_.y(), origin_.z(), maxExpansionCount_);
 			return false;
 		}
 
 		if(ruleExpansions_.size() > maxStackDepth_) {
-			std::cerr << std::format("Failed to spawn structure: maximum stack depth exceeded ({})", maxStackDepth_);
+			std::cerr << std::format("Failed to spawn structure at ({}, {}, {}): maximum stack depth exceeded ({})", origin_.x(), origin_.y(), origin_.z(), maxStackDepth_);
 			return false;
 		}
 
