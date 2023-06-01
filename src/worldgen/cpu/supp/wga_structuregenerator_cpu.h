@@ -217,9 +217,11 @@ private:
 
 private:
 	void addBranch();
-	void failBranch();
+	void failBranch(const std::string &reason);
 
 	bool checkConditions(WGA_GrammarSymbol *sym);
+
+	void reportStats();
 
 private:
 	static BlockWorldPos blockPosValue(WGA_Value *val, const BlockWorldPos &samplePoint);
@@ -232,6 +234,10 @@ private:
 	std::vector<ComponentExpansionStatePtr> componentExpansions_;
 	std::vector<RuleExpansionStatePtr> ruleExpansions_;
 	RuleExpansionQueue queuedRuleExpansions_;
+
+private:
+	std::unordered_map<std::string, int> expansionFailureReasons_;
+
 
 private:
 	size_t expansionCount_ = 0, maxExpansionCount_ = 16384; ///< Limits how many expansion attempts can be made

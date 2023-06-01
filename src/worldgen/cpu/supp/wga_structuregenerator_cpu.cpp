@@ -56,26 +56,29 @@ bool WGA_StructureGenerator_CPU::process() {
 
 	while(true) {
 		if(ruleExpansions_.empty()) {
-			std::cerr << std::format("Failed to spawn structure at ({}, {}, {}): no solution found, tried all possible expansions. ({})", origin_.x(), origin_.y(), origin_.z(), expansionCount_);
+			std::cerr << std::format("Failed to spawn structure at ({}, {}, {}): no solution found, tried all possible expansions. ({})\n", origin_.x(), origin_.y(), origin_.z(), expansionCount_);
+			reportStats();
 			return false;
 		}
 
 		expansionCount_++;
 		if(expansionCount_ >= maxExpansionCount_) {
-			std::cerr << std::format("Failed to spawn structure at ({}, {}, {}): maximum expansion count exceeded ({})", origin_.x(), origin_.y(), origin_.z(), maxExpansionCount_);
+			std::cerr << std::format("Failed to spawn structure at ({}, {}, {}): maximum expansion count exceeded ({})\n", origin_.x(), origin_.y(), origin_.z(), maxExpansionCount_);
+			reportStats();
 			return false;
 		}
 
 		if(ruleExpansions_.size() > maxStackDepth_) {
-			std::cerr << std::format("Failed to spawn structure at ({}, {}, {}): maximum stack depth exceeded ({})", origin_.x(), origin_.y(), origin_.z(), maxStackDepth_);
+			std::cerr << std::format("Failed to spawn structure at ({}, {}, {}): maximum stack depth exceeded ({})\n", origin_.x(), origin_.y(), origin_.z(), maxStackDepth_);
+			reportStats();
 			return false;
 		}
 
-		auto ex = ruleExpansions_.back();
+		RuleExpansionStatePtr ex = ruleExpansions_.back();
 
-		// We've trued all options for this expansion, and have failed
+		// We've tried all options for this expansion, and have failed
 		if(!ex) {
-			failBranch();
+			failBranch({});
 			continue;
 		}
 
@@ -326,7 +329,7 @@ bool WGA_StructureGenerator_CPU::processExpansion(WGA_StructureGenerator_CPU::Ru
 		addBranch();
 
 		if(!expandRule(rex->targetRule(), BlockWorldPos(), ctx.orientation, ss.expansionData)) {
-			failBranch();
+			failBranch(std::format("{} -> {}", ctx.rule->description(), rex->targetRule()->description()));
 			return false;
 		}
 
@@ -410,7 +413,7 @@ bool WGA_StructureGenerator_CPU::processExpansion(WGA_StructureGenerator_CPU::Ru
 						.any();
 
 				if(overlaps != arc.mustOverlap) {
-					failBranch();
+					failBranch(comp->description() + " area " + arc.name);
 					return false;
 				}
 			}
@@ -443,9 +446,9 @@ bool WGA_StructureGenerator_CPU::processExpansion(WGA_StructureGenerator_CPU::Ru
 			// expandRule modifies the currentDataContext_, so we have to reset it
 			currentDataContext_ = cex->data;
 
-			// If the expansion fails, expandRule calls failBranch, so we just return
-			if(!expandRule(node->config().rule, blockPosValue(node->config().position, dcx.constSamplePos()), node->config().orientation, cex->data)) {
-				failBranch();
+			auto rule = node->config().rule;
+			if(!expandRule(rule, blockPosValue(node->config().position, dcx.constSamplePos()), node->config().orientation, cex->data)) {
+				failBranch(std::format("{} -> {}", node->description(), rule->description()));
 				return false;
 			}
 		}
@@ -563,7 +566,7 @@ void WGA_StructureGenerator_CPU::addBranch() {
 	});
 }
 
-void WGA_StructureGenerator_CPU::failBranch() {
+void WGA_StructureGenerator_CPU::failBranch(const std::string &reason) {
 	// ZoneScoped;
 
 	ASSERT(!stateStack_.empty());
@@ -582,6 +585,9 @@ void WGA_StructureGenerator_CPU::failBranch() {
 	ruleExpansions_.resize(s.ruleExpansionCount);
 
 	queuedRuleExpansions_ = s.queuedRuleExpansions;
+
+	if(!reason.empty())
+		expansionFailureReasons_[reason]++;
 }
 
 bool WGA_StructureGenerator_CPU::checkConditions(WGA_GrammarSymbol *sym) {
@@ -590,6 +596,21 @@ bool WGA_StructureGenerator_CPU::checkConditions(WGA_GrammarSymbol *sym) {
 	const bool result = iterator(sym->conditions()).mapx(boolValue(x.value, currentDataContext_->constSamplePos())).all();
 
 	return result;
+}
+
+void WGA_StructureGenerator_CPU::reportStats() {
+	// Failed expansions stack
+	{
+		std::multimap<int, std::string> map;
+		for(const auto &rec: expansionFailureReasons_)
+			map.insert(std::make_pair(-rec.second, rec.first));
+
+		std::cerr << "\nExpansion failure reasons:\n";
+		for(const auto &rec: map)
+			std::cerr << std::format("{:4}x {}\n", -rec.first, rec.second);
+
+		std::cerr << "\n";
+	}
 }
 
 BlockWorldPos WGA_StructureGenerator_CPU::blockPosValue(WGA_Value *val, const BlockWorldPos &samplePoint) {
