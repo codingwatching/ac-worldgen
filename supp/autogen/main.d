@@ -12,15 +12,15 @@ import std.exception;
 import dyaml;
 
 const baseTypes = [
-	"Float", "Float2", "Float3",
-	"Bool",
-	"Block",
-	"Rule", "ComponentNode"
-	];
+"Float", "Float2", "Float3",
+"Bool",
+"Block",
+"Rule", "ComponentNode"
+];
 
 const baseDims = [
-	"2D", "3D", "Const", "PerChunk"
-	];
+"2D", "3D", "Const", "PerChunk"
+];
 
 void main() {
 	string apiCode;
@@ -89,75 +89,82 @@ void main() {
 
 			void procEnd() {
 				procf(resultd[0], 0, (string pt, int i) {
-						resultType = pt;
+					resultType = pt;
 
-						apiCode ~= "f.returnValue.type = WGA_Value::ValueType::%s;\n".format(resultType);
-						apiCode ~= "f.id = %s;\n".format(fid);
-						apiCode ~= "finalize();\n\n";
+					apiCode ~= "f.returnValue.type = WGA_Value::ValueType::%s;\n".format(resultType);
+					apiCode ~= "f.id = %s;\n".format(fid);
+					apiCode ~= "finalize();\n\n";
 
-						string dimCode;
-						string dim = "dim" in funcn ? funcn["dim"].as!string : null;
-						if(baseDims.canFind(dim))
-							dimCode = "WGA_Value::Dimensionality::D%s".format(dim);
-						else if(auto m = dim.matchFirst(ctRegex!"^arg([0-9]+)$"))
-							dimCode = "args[%s]->dimensionality()".format(m[1].to!int - 1);
-						else if(dim == "max" || dim == null)
-							dimCode = "std::max({%s})".format(iota(argt.length).map!(i => "args[%s]->dimensionality()".format(i)).join(", "));
-						else if(dim == "min")
-							dimCode = "std::min({%s})".format(iota(argt.length).map!(i => "args[%s]->dimensionality()".format(i)).join(", "));
-						else if(dim.startsWith(":"))
-							dimCode =
-								dim[1..$]
-									.replaceAll!(m => "args[%s]->dimensionality()".format(m[1].to!int - 1))(ctRegex!r"\barg([0-9]+)\b")
-									;
-						else
-							throw new Exception("Unknown dimensionality: %s".format(dim));
+					string dimCode;
+					string dim = "dim" in funcn ? funcn["dim"].as!string : null;
+					if(baseDims.canFind(dim))
+						dimCode = "WGA_Value::Dimensionality::D%s".format(dim);
+					else if(auto m = dim.matchFirst(ctRegex!"^arg([0-9]+)$"))
+						dimCode = "args[%s]->dimensionality()".format(m[1].to!int - 1);
+					else if(dim == "max" || dim == null)
+						dimCode = "std::max({%s})".format(iota(argt.length).map!(i => "args[%s]->dimensionality()".format(i)).join(", "));
+					else if(dim == "min")
+						dimCode = "std::min({%s})".format(iota(argt.length).map!(i => "args[%s]->dimensionality()".format(i)).join(", "));
+					else if(dim.startsWith(":"))
+						dimCode =
+					dim[1..$]
+					.replaceAll!(m => "args[%s]->dimensionality()".format(m[1].to!int - 1))(ctRegex!r"\barg([0-9]+)\b")
+					;
+					else
+						throw new Exception("Unknown dimensionality: %s".format(dim));
 
-						string fillCode = iota(argt.length).map!(i => "Arg%s argv%s = Arg%s(args[%s]);\n".format(i+1, i+1, i+1, i)).join;
+					string fillCode = iota(argt.length).map!(i => "Arg%s argv%s = Arg%s(args[%s]);\n".format(i+1, i+1, i+1, i)).join;
 
-						string impl = funcn["impl"].as!string;
-						if(impl.startsWith(":"))
-							fillCode ~= `return WGA_%sFuncs_CPU::%s(api, key, data %s);`.format(impl[1..$], functionName, iota(argt.length).map!(i => ", argv%s".format(i+1)).join);
-						else
-							fillCode ~=
-`
-%s
-const int sz = data.size;
-for(int i = 0; i < sz; i++) {
-  %s
-  data[i] = (%s);
- }
- return data;`.format(
- 	iota(argt.length).map!(i => "const Arg%s::DataHandle argh%s = argv%s.dataHandle(key.origin, key.subKey);\n".format(i+1, i+1, i+1)).join,
- 	iota(argt.length).map!(i => "const Arg%s::T arg%s = argh%s[i];\n".format(i+1, i+1, i+1)).join,
- 	impl
- 	);
+					string impl = funcn["impl"].as!string;
+					if(impl.startsWith(":"))
+						fillCode ~= `return WGA_%sFuncs_CPU::%s(api, key, data %s);`.format(impl[1..$], functionName, iota(argt.length).map!(i => ", argv%s".format(i+1)).join);
+					else {
+						fillCode ~= "// Generate two branches of parameter intialization to reduce potential mutex collisions when obtaining the data\n";
+						fillCode ~= iota(argt.length).map!(i => "Arg%s::DataHandle argh%s;\n".format(i+1, i+1)).join;
+						fillCode ~= "if(std::rand() & 1) {\n";
+						fillCode ~= iota(argt.length).map!(i => "argh%s = argv%s.dataHandle(key.origin, key.subKey);\n".format(i+1, i+1)).join; // Standard order
+						fillCode ~= "} else {\n";
+						fillCode ~= iota(argt.length).map!(i => argt.length - 1 - i).map!(i => "argh%s = argv%s.dataHandle(key.origin, key.subKey);\n".format(i+1, i+1)).join; // Inverse order
+						fillCode ~= "}\n";
 
- 						string argDecls = iota(argt.length).map!(i => "using Arg%s = WGA_ValueWrapper_CPU<WGA_Value::ValueType::%s>;\n".format(i+1, argTypes[i])).join;
-						implCode ~=
-`result[%s] = [] (WorldGenAPI_CPU *api, const WorldGenAPI::FunctionArgs &args) {
-	const bool isContextual = %s || iterator(args).anyx(x->isContextual());
+						fillCode ~=
+						`
+						const int sz = data.size;
+						for(int i = 0; i < sz; i++) {
+							%s
+							data[i] = (%s);
+						}
+						return data;`.format(
+							iota(argt.length).map!(i => "const Arg%s::T arg%s = argh%s[i];\n".format(i+1, i+1, i+1)).join,
+							impl
+							);
+					}
 
-	// If the function call uses any contextual value, mark tall used arguments as cross sampled to keep them better in the cache
-	if(isContextual) for(WGA_Value *v : args) static_cast<WGA_Value_CPU*>(v)->markAsCrossSampled(0);
+					string argDecls = iota(argt.length).map!(i => "using Arg%s = WGA_ValueWrapper_CPU<WGA_Value::ValueType::%s>;\n".format(i+1, argTypes[i])).join;
+					implCode ~=
+					`result[%s] = [] (WorldGenAPI_CPU *api, const WorldGenAPI::FunctionArgs &args) {
+						const bool isContextual = %s || iterator(args).anyx(x->isContextual());
 
-	using Result = WGA_ValueWrapper_CPU<WGA_Value::ValueType::%s>;
-	%s
+						// If the function call uses any contextual value, mark tall used arguments as cross sampled to keep them better in the cache
+						if(isContextual) for(WGA_Value *v : args) static_cast<WGA_Value_CPU*>(v)->markAsCrossSampled(0);
 
-	const auto dimFunc = [=] {
-		auto result = %s;
-		ASSERT(result != WGA_Value::Dimensionality::_count);
-		return result;
-	};
-  const auto fillFunc = [=] (const WGA_DataRecord_CPU::Key &key, const typename Result::DataHandle &data) {
-  	%s
-  };
-  return api->registerSymbol(new WGA_Value_CPU(*api, Result::valueType, isContextual, dimFunc, wga_fillCtor<Result::valueType>(dimFunc, fillFunc, "%s")));
-};
+						using Result = WGA_ValueWrapper_CPU<WGA_Value::ValueType::%s>;
+						%s
 
-`.format(fid, isContextual, resultType, argDecls, dimCode, fillCode, functionName);
+						const auto dimFunc = [=] {
+							auto result = %s;
+							ASSERT(result != WGA_Value::Dimensionality::_count);
+							return result;
+						};
+						const auto fillFunc = [=] (const WGA_DataRecord_CPU::Key &key, const typename Result::DataHandle &data) {
+							%s
+						};
+						return api->registerSymbol(new WGA_Value_CPU(*api, Result::valueType, isContextual, dimFunc, wga_fillCtor<Result::valueType>(dimFunc, fillFunc, "%s")));
+					};
 
-						fid ++;
+					`.format(fid, isContextual, resultType, argDecls, dimCode, fillCode, functionName);
+
+					fid ++;
 				});
 			}
 
@@ -183,59 +190,59 @@ for(int i = 0; i < sz; i++) {
 
 	// Write to the files
 	string apiTemplate =
-`// This file was automatically generated by /supp/autogen.
+	`// This file was automatically generated by /supp/autogen.
 
-#include "../worldgenapi.h"
+	#include "../worldgenapi.h"
 
-const WorldGenAPI::Functions &WorldGenAPI::functions() {
-	static const Functions fs = [] {
-		Functions fs;
-		Function f;
+	const WorldGenAPI::Functions &WorldGenAPI::functions() {
+		static const Functions fs = [] {
+			Functions fs;
+			Function f;
 
-		const auto finalize = [&]() {
-			f.prototype = Function::composePrototype(f.name, iterator(f.arguments).mapx(x.type).toList());
-			fs.list.push_back(f);
-			fs.prototypeMapping[f.prototype] = f.id;
-			if(!fs.nameSet.contains(f.name))
-				fs.nameList.push_back(f.name);
-			fs.nameSet.insert(f.name);
-			fs.nameMapping[f.name].push_back(f.id);
-		};
+			const auto finalize = [&]() {
+				f.prototype = Function::composePrototype(f.name, iterator(f.arguments).mapx(x.type).toList());
+				fs.list.push_back(f);
+				fs.prototypeMapping[f.prototype] = f.id;
+				if(!fs.nameSet.contains(f.name))
+					fs.nameList.push_back(f.name);
+				fs.nameSet.insert(f.name);
+				fs.nameMapping[f.name].push_back(f.id);
+			};
 
-		$IMPL$
+			$IMPL$
+			return fs;
+		} ();
 		return fs;
-	} ();
-	return fs;
-}
-`;
+	}
+	`;
 	std.file.write("../../src/worldgen/base/autogen/wga_funcs.cpp", apiTemplate.replace("$IMPL$", apiCode));
 
 	string implTemplate =
-`
-// This file was automatically generated by /supp/autogen.
+	`
+	// This file was automatically generated by /supp/autogen.
 
-#include "../funcs/wga_funcs_cpu.h"
+	#include "../funcs/wga_funcs_cpu.h"
 
-#include "util/iterators.h"
+	#include "util/iterators.h"
 
-#include "../supp/wga_fillfunc_cpu.h"
+	#include "../supp/wga_fillfunc_cpu.h"
 
-#include "../funcs/wga_biomefuncs_cpu.h"
-#include "../funcs/wga_utilityfuncs_cpu.h"
-#include "../funcs/wga_noisefuncs_cpu.h"
-#include "../funcs/wga_structurefuncs_cpu.h"
-#include "../funcs/wga_samplingfuncs_cpu.h"
+	#include "../funcs/wga_biomefuncs_cpu.h"
+	#include "../funcs/wga_utilityfuncs_cpu.h"
+	#include "../funcs/wga_noisefuncs_cpu.h"
+	#include "../funcs/wga_structurefuncs_cpu.h"
+	#include "../funcs/wga_samplingfuncs_cpu.h"
 
-std::unordered_map<WorldGenAPI::FunctionID, WGA_Funcs_CPU::Func> WGA_Funcs_CPU::functions() {
-	static const auto result = [] {
-		std::unordered_map<WorldGenAPI::FunctionID, Func> result;
+	std::unordered_map<WorldGenAPI::FunctionID, WGA_Funcs_CPU::Func> WGA_Funcs_CPU::functions() {
+		static const auto result = [] {
+			std::unordered_map<WorldGenAPI::FunctionID, Func> result;
 
-		$IMPL$
+			$IMPL$
 
+			return result;
+		}();
 		return result;
-	}();
-	return result;
-}
-`;
+	}
+	`;
 	std.file.write("../../src/worldgen/cpu/autogen/wga_funcs_cpu.cpp", implTemplate.replace("$IMPL$", implCode));
 }

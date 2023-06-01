@@ -4,7 +4,7 @@
 #include "util/bytesizeliterals.h"
 #include "util/forit.h"
 #include "util/iterators.h"
-
+#include "worldgen_cpu_utils.h"
 #include "wga_value_cpu.h"
 
 const size_t WGA_DataCache_CPU::cacheSizes[+CacheType::_count] = {
@@ -18,8 +18,12 @@ const size_t WGA_DataCache_CPU::cacheSizes[+CacheType::_count] = {
 
 WGA_DataCache_CPU::WGA_DataCache_CPU() {
 	for(int i = 0; i < +CacheType::_count; i++) {
-		for(int j = 0; j < cacheDivisions; j++)
-			cacheData_[i][j].cache.setMemoryCapacity(std::max<size_t>(1, cacheSizes[i] / cacheDivisions));
+		for(int j = 0; j < cacheDivisions; j++) {
+			auto &data = cacheData_[i][j];
+			auto nm = std::format("dataCache-tp{}-inst{}", i, j);
+			//data.mutex.CustomName(nm.data(), nm.size());
+			data.cache.setMemoryCapacity(std::max<size_t>(1, cacheSizes[i] / cacheDivisions));
+		}
 
 		//TracyPlotConfig(TracyUtils::mapName(std::format("dataCacheHitRate[{}]", i)), tracy::PlotFormatType::Percentage);
 	}
@@ -76,10 +80,14 @@ WGA_DataCache_CPU::DataRecordPtr WGA_DataCache_CPU::get(const WGA_DataRecord_CPU
 		{
 			//ZoneScopedN("dcWrite");
 
-			std::unique_lock _ml(cd.mutex);
-			cd.cache.insert(key, result, result->dataSize());
-			cd.generatedKeys.insert(key);
-			cd.wipKeys.erase(key);
+			{
+				std::unique_lock _ml(cd.mutex);
+				cd.cache.insert(key, result, result->dataSize());
+				cd.generatedKeys.insert(key);
+				cd.wipKeys.erase(key);
+			}
+
+			// THe mutex doesn't need to be locked anymore here
 			cd.wipKeyCondition.notify_all();
 		}
 	}

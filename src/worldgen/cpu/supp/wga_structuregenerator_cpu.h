@@ -240,7 +240,7 @@ private:
 
 
 private:
-	size_t expansionCount_ = 0, maxExpansionCount_ = 16384; ///< Limits how many expansion attempts can be made
+	size_t expansionCount_ = 0, maxExpansionCount_ = 16384 * 4; ///< Limits how many expansion attempts can be made
 	size_t maxStackDepth_ = 4096;
 	Seed seed_;
 	BlockWorldPos origin_;

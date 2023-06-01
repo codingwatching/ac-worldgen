@@ -49,8 +49,8 @@ public:
 	std::shared_ptr<WGA_DataRecordT_CPU<WGA_BiomeData_CPU> > getBiomeData(const BlockWorldPos &origin);
 
 	/// Creates thread local cache for data (saves some mutex collisions)
-	void createLocalCache();
-	void destroyLocalCache();
+	static void createLocalCache();
+	static void destroyLocalCache();
 
 	void reportCacheHitRate();
 

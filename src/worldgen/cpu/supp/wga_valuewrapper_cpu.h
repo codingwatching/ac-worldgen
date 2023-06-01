@@ -13,6 +13,7 @@ public:
 	static constexpr WGA_Value::ValueType valueType = type;
 
 public:
+	WGA_ValueWrapper_CPU() = default;
 	WGA_ValueWrapper_CPU(WGA_Value_CPU *v)
 		: v(v) {
 		if(v) {

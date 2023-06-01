@@ -55,8 +55,8 @@ private:
 		/// Set of keys that are currently being generated
 		std::unordered_set<Key> wipKeys;
 
-		//TracyLockable(QMutex, mutex);
-		TracyLockable(std::mutex, mutex);
+		//TracyLockable(std::mutex, mutex);
+		std::mutex mutex;
 
 		/// Condition used for waiting for a record being generated in a different thread
 		std::condition_variable_any wipKeyCondition;

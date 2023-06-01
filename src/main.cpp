@@ -192,6 +192,8 @@ Compiles the source files and prints out the list of exports.
 
 		for(size_t i = 0; i < threadCount; i++) {
 			pool.push_back(std::thread([i] {
+				WorldGenAPI_CPU::createLocalCache();
+
 				while(true) {
 					std::srand(std::time(0) ^ WorldGen_CPU_Utils::scramble(i));
 
@@ -219,6 +221,8 @@ Compiles the source files and prints out the list of exports.
 						jobEndCondition.notify_all();
 					}
 				}
+
+				WorldGenAPI_CPU::destroyLocalCache();
 			}));
 		}
 

@@ -13,8 +13,9 @@ std::shared_ptr<WGA_DataRecord_CPU> WGA_DataCacheInstance_CPU::get(const WGA_Dat
 		auto &cnt = missCount_[key];
 		cnt++;
 		if(cnt > 2) {
-			TracyMessageL("miss");
-			std::cerr << std::format("Key {} miss {}\n", key.symbol->description(), missCount_[key]);
+			std::string msg = std::format("Key {} miss {}\n", key.symbol->description(), missCount_[key]);
+			TracyMessage(msg.data(), msg.size());
+			//std::cerr <<msg;
 		}
 		return {};
 	}

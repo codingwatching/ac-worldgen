@@ -20,23 +20,31 @@ WGA_DataCache_CPU::DataRecordPtr wga_dimFillCtor(const WGA_DataRecord_CPU::Key &
 	using DataRecord = WGA_StaticArrayDataRecord_CPU<T, cnt>;
 	using DataHandle = WGA_DataHandle_CPU<t>;
 
-	static std::vector<DataRecord *> recycleList_;
-	static TracyLockable(std::mutex, recycleMutex_);
+	static constexpr int recycleBins = 4;
+	static std::vector<DataRecord *> recycleList_[recycleBins];
+	static std::mutex recycleMutex_[recycleBins];
 
 	static const auto dtor = [](DataRecord *rec) {
-		std::unique_lock _ml(recycleMutex_);
-		if(recycleList_.size() > 1024)
+		const int bin = std::rand() % recycleBins;
+
+		std::unique_lock _ml(recycleMutex_[bin]);
+		auto &l = recycleList_[bin];
+
+		if(l.size() > 1024)
 			delete rec;
 		else
-			recycleList_.push_back(rec);
+			l.push_back(rec);
 	};
 
 	DataRecord *rec = nullptr;
 	{
-		std::unique_lock _ml(recycleMutex_);
-		if(!recycleList_.empty()) {
-			rec = recycleList_.back();
-			recycleList_.pop_back();
+		const int bin = std::rand() % recycleBins;
+
+		std::unique_lock _ml(recycleMutex_[bin]);
+		auto &l = recycleList_[bin];
+		if(!l.empty()) {
+			rec = l.back();
+			l.pop_back();
 		}
 	}
 
