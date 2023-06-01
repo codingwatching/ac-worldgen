@@ -66,14 +66,14 @@ private:
 private:
 	std::atomic<size_t> hitCount_[+CacheType::_count], missCount_[+CacheType::_count];
 
-private:
+/*private:
 	struct RecordStats {
 		int hitCount = 0;
 		int missCount = 0;
 		int genCount = 0;
 	};
 	std::unordered_map<Key, RecordStats> recordStats_; ///< Key.origin is set to 0
-	TracyLockable(std::mutex, recordStatsMutex_);
+	TracyLockable(std::mutex, recordStatsMutex_);*/
 
 };
 

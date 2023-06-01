@@ -87,7 +87,7 @@ WGA_DataCache_CPU::DataRecordPtr WGA_DataCache_CPU::get(const WGA_DataRecord_CPU
 		hitCount_[+cacheType]++;
 
 	// Report statistics
-	{
+	/*{
 		Key statsKey = key;
 		statsKey.origin = BlockWorldPos();
 
@@ -100,7 +100,7 @@ WGA_DataCache_CPU::DataRecordPtr WGA_DataCache_CPU::get(const WGA_DataRecord_CPU
 			stats->missCount++;
 		else
 			stats->genCount++;
-	}
+	}*/
 
 	return result;
 }
