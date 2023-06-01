@@ -47,8 +47,10 @@ WGA_DataCache_CPU::DataRecordPtr WGA_DataCache_CPU::get(const WGA_DataRecord_CPU
 		//ZoneScopedN("dcCheck");
 		std::unique_lock _ml(cd.mutex);
 
-		while(cd.wipKeys.contains(key))
+		while(cd.wipKeys.contains(key)) {
+			ZoneScopedNC("waitForKey", tracy::Color::Red);
 			cd.wipKeyCondition.wait(_ml);
+		}
 
 		if(auto p = cd.cache.get(key)) {
 			result = p;

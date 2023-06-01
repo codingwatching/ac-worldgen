@@ -7,6 +7,7 @@
 
 #include "pch.h"
 #include "wga_grammarsymbol.h"
+#include "util/tracyutils.h"
 
 class WGA_Rule : public WGA_GrammarSymbol {
 
@@ -43,7 +44,7 @@ private:
 	std::vector<WGA_RuleExpansion *> expansions_;
 	CompiledExpansionList compiledExpansions_;
 	bool compiledReady_ = false;
-	std::mutex compilingMutex_;
+	TracyLockable(std::mutex, compilingMutex_);
 
 };
 

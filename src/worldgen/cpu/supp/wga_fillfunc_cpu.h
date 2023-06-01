@@ -21,7 +21,7 @@ WGA_DataCache_CPU::DataRecordPtr wga_dimFillCtor(const WGA_DataRecord_CPU::Key &
 	using DataHandle = WGA_DataHandle_CPU<t>;
 
 	static std::vector<DataRecord *> recycleList_;
-	static std::mutex recycleMutex_;
+	static TracyLockable(std::mutex, recycleMutex_);
 
 	static const auto dtor = [](DataRecord *rec) {
 		std::unique_lock _ml(recycleMutex_);

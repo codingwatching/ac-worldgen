@@ -103,7 +103,7 @@ target_precompile_headers(x_ac_worldgen_dummy PRIVATE "${PROJECT_BASE_DIR}/src/p
 target_include_directories(x_ac_worldgen_dummy PRIVATE "${PROJECT_BASE_DIR}/src")
 target_include_directories(x_ac_worldgen_dummy SYSTEM PRIVATE
         "${PROJECT_BASE_DIR}/include"
-        "${PROJECT_BASE_DIR}/deps/tracy"
+        "${CMAKE_BASE_DIR}/install/tracy/include"
         "${CMAKE_BASE_DIR}/install/antlr/include"
         "${CMAKE_BASE_DIR}/install/fastNoise2/include"
         )

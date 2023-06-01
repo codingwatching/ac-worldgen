@@ -20,7 +20,7 @@ std::unordered_map<WorldGenAPI::FunctionID, WGA_Funcs_CPU::Func> WGA_Funcs_CPU::
 		result[0] = [] (WorldGenAPI_CPU *api, const WorldGenAPI::FunctionArgs &args) {
 	const bool isContextual = false || iterator(args).anyx(x->isContextual());
 
-	// If the function call uses any contextual value, mark tall used arguments as cross sampled to keep them better in the cache
+	// If the function call uses any contextual value, mark all used arguments as cross sampled to keep them better in the cache
 	if(isContextual) for(WGA_Value *v : args) static_cast<WGA_Value_CPU*>(v)->markAsCrossSampled(0);
 
 	using Result = WGA_ValueWrapper_CPU<WGA_Value::ValueType::Float3>;

@@ -27,8 +27,8 @@
 
 std::mutex stdoutMutex;
 
-std::mutex jobsMutex;
-std::condition_variable jobEndCondition, newJobCondition;
+TracyLockable(std::mutex, jobsMutex);
+std::condition_variable_any jobEndCondition, newJobCondition;
 std::queue<std::function<void()>> jobs;
 size_t runningJobs = 0;
 
