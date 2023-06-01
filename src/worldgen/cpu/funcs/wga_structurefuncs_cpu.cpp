@@ -4,8 +4,8 @@
 #include <format>
 
 #include "util/tracyutils.h"
-
-#include "../supp/wga_structuregenerator_cpu.h"
+#include "util/containerutils.h"
+#include "worldgen/cpu/supp/wga_structuregenerator_cpu.h"
 
 void WGA_StructureFuncs_CPU::spawn2D(Api api, Key key, DH <VT::Block> result, V <VT::Rule> entryRule, V <VT::Float> maxRadius, V <VT::Float> seed, V <VT::Float> spawnZ, V <VT::Bool> spawnCondition) {
 	const auto spawnFunc = [&spawnZ, &spawnCondition, &entryRule](Api api, Key key, SpawnList &spawnList) {
@@ -152,7 +152,17 @@ void WGA_StructureFuncs_CPU::_spawn(WGA_Funcs_CPU::Api api, WGA_Funcs_CPU::Key k
 
 	const ChunkWorldPos originChunk = key.origin.chunkPosition();
 	const ChunkWorldPos_T maxRadiusV = static_cast<ChunkWorldPos_T>(maxRadius.constValue());
-	for(const ChunkWorldPos &pos: vectorIterator(originChunk - maxRadiusV, originChunk + maxRadiusV)) {
+	const ChunkWorldPos_T diameter = maxRadiusV * 2 + 1;
+
+	std::vector<ChunkWorldPos> chunks;
+	chunks.reserve(diameter * diameter);
+	for(const ChunkWorldPos &pos: vectorIterator<ChunkWorldPos>(originChunk - maxRadiusV, originChunk + maxRadiusV))
+		chunks.push_back(pos);
+
+	// Randomize iteration order to reduce mutex collisions
+	ContainerUtils::randomShuffle(chunks.begin(), chunks.end(), std::rand());
+
+	for(const ChunkWorldPos &pos: chunks) {
 		ZoneScopedN("radiusIterate");
 
 		const WGA_DataRecord_CPU::Key recKey(key.symbol, BlockWorldPos::fromChunkBlockIndex(pos, 0, 0), 1);

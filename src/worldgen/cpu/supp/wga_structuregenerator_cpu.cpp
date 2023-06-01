@@ -7,16 +7,15 @@
 #include "util/tracyutils.h"
 #include "util/iterators.h"
 #include "util/valueguard.h"
-
 #include "worldgen/base/supp/wga_rule.h"
 #include "worldgen/base/supp/wga_ruleexpansion.h"
 #include "worldgen/base/supp/wga_component.h"
 #include "worldgen/base/supp/wga_componentnode.h"
-
 #include "worldgen_cpu_utils.h"
 #include "worldgen/cpu/worldgenapi_cpu.h"
 #include "wga_value_cpu.h"
 #include "wga_valuewrapper_cpu.h"
+#include "util/containerutils.h"
 
 WGA_StructureGenerator_CPU::WGA_StructureGenerator_CPU(WorldGenAPI_CPU &api) :
 	api_(api) {
@@ -428,15 +427,8 @@ bool WGA_StructureGenerator_CPU::processExpansion(WGA_StructureGenerator_CPU::Ru
 
 		auto nodes = comp->nodes();
 
-		// Randomize the order of the nodes using Fisher-Yates shuffle
-		{
-			const size_t sz = nodes.size();
-			const Seed seed = WorldGen_CPU_Utils::hash(dcx.seed() ^ 1531, seed_);
-			for(int i = 0; i < sz; i++) {
-				const int j = i + (WorldGen_CPU_Utils::hash(i, seed) % (sz - i));
-				std::swap(nodes[i], nodes[j]);
-			}
-		}
+		// Randomize the order of the nodes
+		ContainerUtils::randomShuffle(nodes.begin(), nodes.end(), WorldGen_CPU_Utils::hash(dcx.seed() ^ 1531, seed_));
 
 		// Expand the component node rules
 		for(const WGA_ComponentNode *node: nodes) {
@@ -533,15 +525,8 @@ WGA_StructureGenerator_CPU::RuleExpansionStatePtr WGA_StructureGenerator_CPU::ne
 						opts.push_back({targetNode, ori});
 				}
 
-				// Randomize the order of the nodes using Fisher-Yates shuffle
-				{
-					const size_t sz = opts.size();
-					const Seed seed = WorldGen_CPU_Utils::hash(16512, dcx.seed());
-					for(size_t i = 0; i < sz; i++) {
-						const size_t j = i + (WorldGen_CPU_Utils::hash(i, seed) % (sz - i));
-						std::swap(opts[i], opts[j]);
-					}
-				}
+				// Randomize the order of the nodes
+				ContainerUtils::randomShuffle(opts.begin(), opts.end(), WorldGen_CPU_Utils::hash(16512, dcx.seed()));
 			}
 			else
 				// Push one dummy option to trigger the expansion processing

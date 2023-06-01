@@ -18,12 +18,11 @@
 #include "util/forit.h"
 #include "util/iterators.h"
 #include "util/tracyutils.h"
-
 #include "worldgen/base/worldgenapi.h"
-
 #include "worldgen/cpu/worldgenapi_cpu.h"
 #include "worldgen/cpu/supp/wga_valuewrapper_cpu.h"
 #include "woglac/wglcompiler.h"
+#include "worldgen/cpu/supp/worldgen_cpu_utils.h"
 
 std::mutex stdoutMutex;
 
@@ -192,8 +191,10 @@ Compiles the source files and prints out the list of exports.
 		}
 
 		for(size_t i = 0; i < threadCount; i++) {
-			pool.push_back(std::thread([] {
+			pool.push_back(std::thread([i] {
 				while(true) {
+					std::srand(std::time(0) ^ WorldGen_CPU_Utils::scramble(i));
+
 					std::function<void()> job;
 
 					{
