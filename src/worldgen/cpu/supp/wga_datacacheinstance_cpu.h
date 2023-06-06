@@ -45,5 +45,7 @@ private:
 	/// Temporary implementation
 	RandomAccessHashTable<Key, Record> hash_;
 
+	std::unordered_map<Key, size_t> missCount_;
+
 };
 

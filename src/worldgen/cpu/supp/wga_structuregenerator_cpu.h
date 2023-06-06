@@ -217,9 +217,11 @@ private:
 
 private:
 	void addBranch();
-	void failBranch();
+	void failBranch(const std::string &reason);
 
 	bool checkConditions(WGA_GrammarSymbol *sym);
+
+	void reportStats();
 
 private:
 	static BlockWorldPos blockPosValue(WGA_Value *val, const BlockWorldPos &samplePoint);
@@ -234,9 +236,14 @@ private:
 	RuleExpansionQueue queuedRuleExpansions_;
 
 private:
-	size_t expansionCount_ = 0, maxExpansionCount_ = 16384; ///< Limits how many expansion attempts can be made
+	std::unordered_map<std::string, int> expansionFailureReasons_;
+
+
+private:
+	size_t expansionCount_ = 0, maxExpansionCount_ = 16384 * 4; ///< Limits how many expansion attempts can be made
 	size_t maxStackDepth_ = 4096;
 	Seed seed_;
+	BlockWorldPos origin_;
 	std::unordered_map<std::string, int> areaNameMapping_; ///< Mapping are names to int to speed up comparison
 
 private:

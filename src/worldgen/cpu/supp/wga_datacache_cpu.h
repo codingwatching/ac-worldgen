@@ -4,10 +4,11 @@
 #include <mutex>
 
 #include "util/enumutils.h"
-#include "worldgen/base/supp/wga_value.h"
 
+#include "worldgen/base/supp/wga_value.h"
 #include "wga_datarecord_cpu.h"
 #include "wga_datacacheinstance_cpu.h"
+#include "util/tracyutils.h"
 
 class WGA_DataCache_CPU {
 
@@ -54,25 +55,25 @@ private:
 		/// Set of keys that are currently being generated
 		std::unordered_set<Key> wipKeys;
 
-		//TracyLockable(QMutex, mutex);
+		//TracyLockable(std::mutex, mutex);
 		std::mutex mutex;
 
 		/// Condition used for waiting for a record being generated in a different thread
-		std::condition_variable wipKeyCondition;
+		std::condition_variable_any wipKeyCondition;
 	};
 	CacheData cacheData_[+CacheType::_count][cacheDivisions];
 
 private:
 	std::atomic<size_t> hitCount_[+CacheType::_count], missCount_[+CacheType::_count];
 
-private:
+/*private:
 	struct RecordStats {
 		int hitCount = 0;
 		int missCount = 0;
 		int genCount = 0;
 	};
 	std::unordered_map<Key, RecordStats> recordStats_; ///< Key.origin is set to 0
-	std::mutex recordStatsMutex_;
+	TracyLockable(std::mutex, recordStatsMutex_);*/
 
 };
 

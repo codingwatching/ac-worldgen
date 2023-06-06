@@ -18,17 +18,16 @@
 #include "util/forit.h"
 #include "util/iterators.h"
 #include "util/tracyutils.h"
-
 #include "worldgen/base/worldgenapi.h"
-
 #include "worldgen/cpu/worldgenapi_cpu.h"
 #include "worldgen/cpu/supp/wga_valuewrapper_cpu.h"
 #include "woglac/wglcompiler.h"
+#include "worldgen/cpu/supp/worldgen_cpu_utils.h"
 
 std::mutex stdoutMutex;
 
-std::mutex jobsMutex;
-std::condition_variable jobEndCondition, newJobCondition;
+TracyLockable(std::mutex, jobsMutex);
+std::condition_variable_any jobEndCondition, newJobCondition;
 std::queue<std::function<void()>> jobs;
 size_t runningJobs = 0;
 
@@ -192,8 +191,12 @@ Compiles the source files and prints out the list of exports.
 		}
 
 		for(size_t i = 0; i < threadCount; i++) {
-			pool.push_back(std::thread([] {
+			pool.push_back(std::thread([i] {
+				WorldGenAPI_CPU::createLocalCache();
+
 				while(true) {
+					std::srand(std::time(0) ^ WorldGen_CPU_Utils::scramble(i));
+
 					std::function<void()> job;
 
 					{
@@ -218,6 +221,8 @@ Compiles the source files and prints out the list of exports.
 						jobEndCondition.notify_all();
 					}
 				}
+
+				WorldGenAPI_CPU::destroyLocalCache();
 			}));
 		}
 

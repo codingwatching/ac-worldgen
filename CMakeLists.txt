@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.20)
 include(ExternalProject)
 
-project(ac_worldgen_master VERSION 0.0.3 LANGUAGES CXX)
+project(ac_worldgen_master VERSION 1.0.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -103,7 +103,7 @@ target_precompile_headers(x_ac_worldgen_dummy PRIVATE "${PROJECT_BASE_DIR}/src/p
 target_include_directories(x_ac_worldgen_dummy PRIVATE "${PROJECT_BASE_DIR}/src")
 target_include_directories(x_ac_worldgen_dummy SYSTEM PRIVATE
         "${PROJECT_BASE_DIR}/include"
-        "${PROJECT_BASE_DIR}/deps/tracy"
+        "${CMAKE_BASE_DIR}/install/tracy/include"
         "${CMAKE_BASE_DIR}/install/antlr/include"
         "${CMAKE_BASE_DIR}/install/fastNoise2/include"
         )

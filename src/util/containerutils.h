@@ -2,6 +2,8 @@
 
 #include <cstdlib>
 
+#include "worldgen/cpu/supp/worldgen_cpu_utils.h"
+
 class ContainerUtils {
 
 public:
@@ -29,6 +31,18 @@ public:
 		}
 
 		return bestIx;
+	}
+
+	/// Pseudo-randomly shuffles the order of the items using Fisher-Yates shuffle
+	template<typename I>
+	static void randomShuffle(I begin, I end, uint32_t seed) {
+		const size_t sz = end - begin;
+		size_t ix = 0;
+		for(auto i = begin; i < end; i++) {
+			const auto j = i + (WorldGen_CPU_Utils::hash(ix, seed) % (sz - ix));
+			std::swap(*i, *j);
+			ix++;
+		}
 	}
 
 };

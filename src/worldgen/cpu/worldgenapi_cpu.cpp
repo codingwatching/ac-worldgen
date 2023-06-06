@@ -1,11 +1,10 @@
 #include "worldgenapi_cpu.h"
 
 #include <cmath>
+#include <iostream>
 
 #include "util/iterators.h"
-
 #include "worldgen/base/supp/wga_componentnode.h"
-
 #include "supp/wga_biomedata_cpu.h"
 #include "supp/wga_value_cpu.h"
 #include "supp/wga_fillfunc_cpu.h"
@@ -126,14 +125,15 @@ WGA_DataRecord_CPU::Ptr WorldGenAPI_CPU::getDataRecord(const WGA_DataRecord_CPU:
 		static_cast<WGA_Value_CPU*>(key.symbol)->markAsCrossSampled(key.subKey);
 	}*/
 
-	if(localCache) {
-		// Qt6 - QHash references are no longer stable
-		WGA_DataRecord_CPU::Ptr result = (*localCache)[key];
-		if(!result) {
-			result = dataCache_.get(key, ctor);
-			(*localCache)[key] = result;
-		}
+	if(auto lc = localCache; key.symbol && !key.symbol->isContextual() && lc) {
+		while(lc->size() >= 2048)
+			lc->erase(lc->begin());
 
+		if(auto result = lc->find(key); result != lc->end())
+			return result->second;
+
+		auto result = dataCache_.get(key, ctor);
+		lc->insert({key, result});
 		return result;
 	}
 
