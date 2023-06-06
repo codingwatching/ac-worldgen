@@ -641,13 +641,13 @@ In certain situations, for example when you have even block count wide corridors
 Rules define... well rules of what component will actually be spawned. The used terminology is that rules *expand* into components. A rule can have multiple possible expansions, each with different priority and probability. 
 
 ### Rule pragmas
-<center>``
+<center>
 
 | Pragma | Type | Default value | Description |
 | --- | --- | --- | --- |
 `depthFirstProbability` | `Float` | `1` | Probability that the rule will expand depth-first (will put current rule expansions to the top of the queue) opposed to breadth-frist (would add current rule expansions to the end of the queue)
 
-``</center>
+</center>
 
 ### Rule expansions
 > ```g4
