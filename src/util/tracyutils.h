@@ -1,3 +1,3 @@
 #pragma once
 
-#include "Tracy.hpp"
+#include "tracy/Tracy.hpp"
